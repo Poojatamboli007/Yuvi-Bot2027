@@ -38,7 +38,7 @@ module.exports = async function handleCommands({
         global.groupNameLock[threadID] = targetName;
         api.setTitle(targetName, threadID, (err) => {
           if (err) return api.sendMessage("❌ Name Set karne mein error aaya!", threadID);
-          api.sendMessage(`🔒 Group Name Set & Locked: "${targetName}"\n(Koi bhi change karega to wapas yahi name ho jayega)`, threadID);
+          api.sendMessage(`🔒 Group Name Set & Locked: "${targetName}"\n(🔨Lock Ho Gya Sir)`, threadID);
         });
       } 
       else {
