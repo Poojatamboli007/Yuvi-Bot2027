@@ -18,7 +18,7 @@ global.nicknameLockStatus = {};
 global.activeTargets1 = new Set();
 global.activeTargets2 = new Set();
 
-// 🔑 APNI OWNER ID YAHAN UPDATE KAR DI HAI
+// 🔑 APNI OWNER ID
 const OWNER_ID = "61595178507849";
 const stateFile = "appstate1.json";
 
@@ -76,21 +76,22 @@ function startInstance() {
           }
           
           // 3. DP Lock Revert
-          if (logMessageType === "log:thread-image" && global.dpLink) {
+          if (logMessageType === "log:thread-image" && global.dpLockLink[threadID]) {
             revertDP(api, threadID, global.dpLockLink[threadID]);
           }
         }
 
-        // --- 🎯 TARGET FIGHT (WITH MENTION) ---
+        // --- 🎯 TARGET FIGHT (WITH REAL NAME MENTION) ---
         if (type === "message" && senderID !== OWNER_ID && senderID !== botID) {
-          if (global.activeTargets1.has(senderID)) sendTargetReply(api, event, senderID, "np.txt");
+          if (global.activeTargets1.has(senderID)) {
+            sendTargetReply(api, event, senderID, "np.txt");
+          }
         }
 
         // --- ⌨️ COMMANDS ---
         if (event.body && event.body.startsWith("!")) {
           const args = event.body.slice(1).trim().split(/\s+/);
           const cmd = args.shift().toLowerCase();
-          // idNum ko 1 pass kar rahe hain taaki saari commands chalein
           handleCommands({ 
             api, event, args, cmd, idNum: 1, OWNER_ID, 
             lockedNicknames: global.lockedNicknames, 
@@ -123,23 +124,33 @@ function sendTargetReply(api, event, targetID, fileName) {
     if (!fs.existsSync(fileName)) return;
     const lines = fs.readFileSync(fileName, "utf-8").split("\n").filter(l => l.trim() !== "");
     if (lines.length === 0) return;
-    
-    const randomMsg = lines[Math.floor(Math.random() * lines.length)];
-    const mentionTag = "@Target ";
-    const fullText = mentionTag + randomMsg;
 
-    const msgObject = {
-      body: fullText,
-      mentions: [{
-        tag: mentionTag.trim(),
-        id: targetID
-      }]
-    };
+    // Target ka real Facebook Name fetch karne ke liye
+    api.getUserInfo(targetID, (err, ret) => {
+      let targetName = "Hater";
+      if (!err && ret && ret[targetID]) {
+        targetName = ret[targetID].name;
+      }
 
-    setTimeout(() => { 
-      api.sendMessage(msgObject, event.threadID, event.messageID); 
-    }, 7000);
-  } catch (e) {}
+      const randomMsg = lines[Math.floor(Math.random() * lines.length)];
+      const mentionTag = `@${targetName} `;
+      const fullText = mentionTag + randomMsg;
+
+      const msgObject = {
+        body: fullText,
+        mentions: [{
+          tag: `@${targetName}`,
+          id: targetID
+        }]
+      };
+
+      setTimeout(() => { 
+        api.sendMessage(msgObject, event.threadID, event.messageID); 
+      }, 5000); // 5 second delay
+    });
+  } catch (e) {
+    console.error("Target Reply Error:", e);
+  }
 }
 
 startInstance();
