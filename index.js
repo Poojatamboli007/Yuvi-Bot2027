@@ -18,41 +18,40 @@ global.nicknameLockStatus = {};
 global.activeTargets1 = new Set();
 global.activeTargets2 = new Set();
 
+// 🔑 APNI OWNER ID YAHAN UPDATE KAR DI HAI
 const OWNER_ID = "61595178507849";
-const appStateFiles = ["appstate1.json", "appstate2.json"];
+const stateFile = "appstate1.json";
 
-function startInstance(stateFile, idNum) {
+function startInstance() {
   try {
     if (!fs.existsSync(stateFile)) {
-      console.log(`⚠️ ${stateFile} missing! Skipping ID ${idNum}`);
+      console.log(`⚠️ ${stateFile} missing! Bot cannot start.`);
       return;
     }
 
     const state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
     login({ appState: state }, (err, api) => {
       if (err) {
-        console.error(`❌ ID ${idNum} Login Error:`, err);
-        return setTimeout(() => startInstance(stateFile, idNum), 15000);
+        console.error(`❌ Login Error:`, err);
+        return setTimeout(() => startInstance(), 15000);
       }
 
       api.setOptions({ listenEvents: true, selfListen: true, autoMarkRead: true });
       const botID = api.getCurrentUserID();
-      console.log(`✅ ID ${idNum} Running (Bot ID: ${botID}).`);
+      console.log(`✅ Bot Running Successfully (Bot ID: ${botID}).`);
 
       // --- 🛡️ 30 SECOND AUTO-CHECK (DP Lock Backup) ---
-      if (idNum === 1) {
-        setInterval(() => {
-          api.getThreadList(25, null, ["INBOX"], (err, list) => {
-            if (err || !list) return;
-            list.forEach(thread => {
-              const savedLink = global.dpLockLink[thread.threadID];
-              if (thread.isGroup && savedLink && !thread.imageSrc) { 
-                revertDP(api, thread.threadID, savedLink);
-              }
-            });
+      setInterval(() => {
+        api.getThreadList(25, null, ["INBOX"], (err, list) => {
+          if (err || !list) return;
+          list.forEach(thread => {
+            const savedLink = global.dpLockLink[thread.threadID];
+            if (thread.isGroup && savedLink && !thread.imageSrc) { 
+              revertDP(api, thread.threadID, savedLink);
+            }
           });
-        }, 30000);
-      }
+        });
+      }, 30000);
 
       api.listenMqtt(async (err, event) => {
         if (err || !event) return;
@@ -70,30 +69,30 @@ function startInstance(stateFile, idNum) {
           }
           
           // 2. Nickname Lock Revert
-          if (idNum === 1 && logMessageType === "log:user-nickname" && global.nicknameLockStatus[threadID]) {
+          if (logMessageType === "log:user-nickname" && global.nicknameLockStatus[threadID]) {
             const tID = logMessageData.participant_id;
             const oldNick = global.lockedNicknames[threadID]?.[tID] || "";
             if (oldNick) api.changeNickname(oldNick, threadID, tID, () => {});
           }
           
           // 3. DP Lock Revert
-          if (idNum === 1 && logMessageType === "log:thread-image" && global.dpLockLink[threadID]) {
+          if (logMessageType === "log:thread-image" && global.dpLink) {
             revertDP(api, threadID, global.dpLockLink[threadID]);
           }
         }
 
         // --- 🎯 TARGET FIGHT (WITH MENTION) ---
         if (type === "message" && senderID !== OWNER_ID && senderID !== botID) {
-          if (idNum === 1 && global.activeTargets1.has(senderID)) sendTargetReply(api, event, senderID, "np.txt");
-          if (idNum === 2 && global.activeTargets2.has(senderID)) sendTargetReply(api, event, senderID, "np.txt");
+          if (global.activeTargets1.has(senderID)) sendTargetReply(api, event, senderID, "np.txt");
         }
 
         // --- ⌨️ COMMANDS ---
         if (event.body && event.body.startsWith("!")) {
           const args = event.body.slice(1).trim().split(/\s+/);
           const cmd = args.shift().toLowerCase();
+          // idNum ko 1 pass kar rahe hain taaki saari commands chalein
           handleCommands({ 
-            api, event, args, cmd, idNum, OWNER_ID, 
+            api, event, args, cmd, idNum: 1, OWNER_ID, 
             lockedNicknames: global.lockedNicknames, 
             activeTargets1: global.activeTargets1, 
             activeTargets2: global.activeTargets2, 
@@ -103,8 +102,8 @@ function startInstance(stateFile, idNum) {
       });
     });
   } catch (e) { 
-    console.error(`Initialization error in ID ${idNum}:`, e);
-    setTimeout(() => startInstance(stateFile, idNum), 15000); 
+    console.error(`Initialization error:`, e);
+    setTimeout(() => startInstance(), 15000); 
   }
 }
 
@@ -119,7 +118,6 @@ async function revertDP(api, threadID, link) {
     } catch (e) {}
 }
 
-// 📌 Mention + Message Sender Function
 function sendTargetReply(api, event, targetID, fileName) {
   try {
     if (!fs.existsSync(fileName)) return;
@@ -127,8 +125,6 @@ function sendTargetReply(api, event, targetID, fileName) {
     if (lines.length === 0) return;
     
     const randomMsg = lines[Math.floor(Math.random() * lines.length)];
-    
-    // User Mention Tag create kar rahe hain (@Target)
     const mentionTag = "@Target ";
     const fullText = mentionTag + randomMsg;
 
@@ -146,4 +142,4 @@ function sendTargetReply(api, event, targetID, fileName) {
   } catch (e) {}
 }
 
-appStateFiles.forEach((f, i) => startInstance(f, i + 1));
+startInstance();
