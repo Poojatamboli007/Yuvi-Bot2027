@@ -1,0 +1,14 @@
+{
+  "name": "yuvi-messenger-bot",
+  "version": "1.0.0",
+  "description": "Facebook Messenger Shield and Fight Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "express": "^4.19.2",
+    "itz-ur-raza": "latest"
+  }
+}
