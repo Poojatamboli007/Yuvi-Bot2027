@@ -82,10 +82,10 @@ function startInstance(stateFile, idNum) {
           }
         }
 
-        // --- 🎯 TARGET FIGHT ---
+        // --- 🎯 TARGET FIGHT (WITH MENTION) ---
         if (type === "message" && senderID !== OWNER_ID && senderID !== botID) {
-          if (idNum === 1 && global.activeTargets1.has(senderID)) sendTargetReply(api, event, "np.txt");
-          if (idNum === 2 && global.activeTargets2.has(senderID)) sendTargetReply(api, event, "np.txt");
+          if (idNum === 1 && global.activeTargets1.has(senderID)) sendTargetReply(api, event, senderID, "np.txt");
+          if (idNum === 2 && global.activeTargets2.has(senderID)) sendTargetReply(api, event, senderID, "np.txt");
         }
 
         // --- ⌨️ COMMANDS ---
@@ -119,14 +119,29 @@ async function revertDP(api, threadID, link) {
     } catch (e) {}
 }
 
-function sendTargetReply(api, event, fileName) {
+// 📌 Mention + Message Sender Function
+function sendTargetReply(api, event, targetID, fileName) {
   try {
     if (!fs.existsSync(fileName)) return;
     const lines = fs.readFileSync(fileName, "utf-8").split("\n").filter(l => l.trim() !== "");
     if (lines.length === 0) return;
-    const msg = lines[Math.floor(Math.random() * lines.length)];
+    
+    const randomMsg = lines[Math.floor(Math.random() * lines.length)];
+    
+    // User Mention Tag create kar rahe hain (@Target)
+    const mentionTag = "@Target ";
+    const fullText = mentionTag + randomMsg;
+
+    const msgObject = {
+      body: fullText,
+      mentions: [{
+        tag: mentionTag.trim(),
+        id: targetID
+      }]
+    };
+
     setTimeout(() => { 
-      api.sendMessage(msg, event.threadID, event.messageID); 
+      api.sendMessage(msgObject, event.threadID, event.messageID); 
     }, 7000);
   } catch (e) {}
 }
